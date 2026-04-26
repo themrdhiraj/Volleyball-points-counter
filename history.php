@@ -1,0 +1,270 @@
+<?php
+// Session and Admin checks removed to allow public access
+require 'db.php';
+// We set a default for $is_admin so the settings gear remains hidden for regular visitors
+$is_admin = false; 
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>V-ELITE v5.7</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@700&display=swap');
+        
+        :root { --bg: #020617; --card: rgba(30, 41, 59, 0.7); --text: #f8fafc; --border: rgba(255, 255, 255, 0.1); }
+        .light-theme { --bg: #f8fafc; --card: rgba(255, 255, 255, 0.9); --text: #0f172a; --border: rgba(0, 0, 0, 0.1); }
+
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text); min-height: 100dvh; text-transform: uppercase; margin: 0; padding: 0; display: flex; flex-direction: column; overflow: hidden; }
+        .glass { background: var(--card); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: 1.2rem; }
+        .score-font { font-family: 'JetBrains Mono', monospace; line-height: 1; }
+        
+        .res-btn { display: flex; flex-direction: column; padding: 6px; border-radius: 10px; font-weight: 800; flex: 1; text-align: center; }
+        .to-style { color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.05); }
+        .sub-style { color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05); }
+        .res-dead { opacity: 0.1; filter: grayscale(1); pointer-events: none; }
+        
+        .team-a-theme { border-left: 6px solid #2563eb !important; }
+        .team-b-theme { border-left: 6px solid #ea580c !important; }
+        .serving { outline: 3px solid #3b82f6; box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
+        
+        .game-title-row { background: linear-gradient(to right, transparent, var(--border), transparent); letter-spacing: 0.2em; border-radius: 8px; }
+
+        @media print { 
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white; color: black; overflow: visible; }
+            table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 9pt; color: #000; text-transform: uppercase; }
+            th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
+            .row-a { background-color: #f0f9ff !important; -webkit-print-color-adjust: exact; }
+            .row-b { background-color: #fff7ed !important; -webkit-print-color-adjust: exact; }
+            .row-set-win { background-color: #f1f5f9 !important; font-weight: 900; text-align: center; border-top: 2px solid #000; -webkit-print-color-adjust: exact; }
+            .win-point { font-weight: 900; text-decoration: underline; }
+        }
+    </style>
+</head>
+<body class="p-2 gap-2">
+
+    <div id="initModal" class="fixed inset-0 z-[100] bg-slate-950 flex items-center justify-center p-6 no-print">
+        <div class="glass p-8 w-full max-w-xs text-center shadow-2xl">
+            <h1 class="text-3xl font-black mb-6 italic text-white">V-ELITE <span class="text-blue-500">5.7</span></h1>
+            <div class="space-y-4">
+                <button onclick="startMatch(3)" class="w-full bg-blue-600 py-4 rounded-xl font-black text-white active:bg-blue-700">BEST OF 3</button>
+                <button onclick="startMatch(5)" class="w-full bg-slate-800 py-4 rounded-xl font-black text-white active:bg-slate-700">BEST OF 5</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="nextSetModal" class="fixed inset-0 z-[110] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-6 hidden no-print">
+        <div class="glass p-8 w-full max-w-xs text-center border-blue-500 border-2">
+            <h2 id="setWinnerMsg" class="text-xl font-black mb-6 text-white leading-tight"></h2>
+            <button onclick="confirmNextSet()" class="w-full bg-blue-600 py-5 rounded-xl font-black text-white tracking-widest shadow-xl">START NEXT SET</button>
+        </div>
+    </div>
+
+    <header class="flex justify-between items-center px-4 py-2 glass shrink-0 no-print">
+        <div id="setInfo" class="text-[11px] font-black text-blue-500 italic tracking-widest">SET 1</div>
+        <div class="flex gap-2 items-center">
+            <button onclick="toggleTheme()" class="w-8 h-8 flex items-center justify-center glass text-xs" title="Toggle Theme">🌓</button>
+            <?php if($is_admin): ?>
+                <a href="users.php" title="Manage Users" class="w-8 h-8 flex items-center justify-center glass text-[10px]">⚙️</a>
+            <?php endif; ?>
+            <a href="history.php" title="Match History" class="w-8 h-8 flex items-center justify-center glass text-[10px]">📜</a>
+            <button onclick="undo()" class="px-3 h-8 glass text-[9px] font-bold" title="Undo Last Point">UNDO</button>
+            <button onclick="resetMatch()" class="w-8 h-8 flex items-center justify-center glass text-red-500 text-xs" title="Reset Match">🔄</button>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col gap-2 min-h-0 no-print">
+        <div id="cardA" class="glass team-a-theme flex-1 flex flex-col justify-center px-4 py-2">
+            <div class="flex justify-between items-center mb-1">
+                <input type="text" id="nameA" value="HOME" class="bg-transparent font-black text-[10px] outline-none w-3/4">
+                <div id="srvA" class="w-3 h-3 rounded-full bg-yellow-400 hidden shadow-glow"></div>
+            </div>
+            <div class="flex justify-between items-center">
+                <span id="scoreA" class="score-font text-6xl tracking-tighter">00</span>
+                <div class="text-right">
+                    <div id="setsA" class="text-3xl font-black text-blue-500">0</div>
+                    <div id="remA" class="text-[7px] font-bold opacity-40 uppercase">TO WIN: 25</div>
+                </div>
+            </div>
+            <div class="flex gap-2 mt-2">
+                <button id="btnToA" onclick="recordAction('TO', 'A')" class="res-btn to-style">
+                    <span class="text-[6px]">TIMEOUT</span><span class="text-xs">REM: <span id="numToA">2</span></span>
+                </button>
+                <button id="btnSubA" onclick="recordAction('SUB', 'A')" class="res-btn sub-style">
+                    <span class="text-[6px]">SUB</span><span class="text-xs">REM: <span id="numSubA">6</span></span>
+                </button>
+            </div>
+        </div>
+
+        <div class="game-title-row py-1 flex justify-center items-center px-2">
+            <input type="text" id="matchID" value="OFFICIAL MATCH" class="bg-transparent font-black text-center text-blue-500/80 text-[10px] w-full outline-none uppercase placeholder:opacity-20" placeholder="ENTER GAME TITLE...">
+        </div>
+
+        <div id="cardB" class="glass team-b-theme flex-1 flex flex-col justify-center px-4 py-2">
+            <div class="flex justify-between items-center mb-1">
+                <input type="text" id="nameB" value="GUEST" class="bg-transparent font-black text-[10px] outline-none w-3/4">
+                <div id="srvB" class="w-3 h-3 rounded-full bg-yellow-400 hidden shadow-glow"></div>
+            </div>
+            <div class="flex justify-between items-center">
+                <span id="scoreB" class="score-font text-6xl tracking-tighter">00</span>
+                <div class="text-right">
+                    <div id="setsB" class="text-3xl font-black text-orange-500">0</div>
+                    <div id="remB" class="text-[7px] font-bold opacity-40 uppercase">TO WIN: 25</div>
+                </div>
+            </div>
+            <div class="flex gap-2 mt-2">
+                <button id="btnToB" onclick="recordAction('TO', 'B')" class="res-btn to-style">
+                    <span class="text-[6px]">TIMEOUT</span><span class="text-xs">REM: <span id="numToB">2</span></span>
+                </button>
+                <button id="btnSubB" onclick="recordAction('SUB', 'B')" class="res-btn sub-style">
+                    <span class="text-[6px]">SUB</span><span class="text-xs">REM: <span id="numSubB">6</span></span>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <footer class="grid grid-cols-2 gap-2 h-20 shrink-0 no-print">
+        <button onclick="addPoint('A')" class="bg-blue-600 rounded-xl font-black text-white text-base active:scale-95 transition-all">POINT A</button>
+        <button onclick="addPoint('B')" class="bg-orange-600 rounded-xl font-black text-white text-base active:scale-95 transition-all">POINT B</button>
+    </footer>
+
+    <div id="finishModal" class="fixed inset-0 z-[200] bg-slate-950 flex items-center justify-center p-6 hidden no-print">
+        <div class="glass p-8 w-full max-w-xs text-center shadow-2xl border border-blue-500/30">
+            <h2 id="finalWinnerUI" class="text-2xl font-black mb-8 italic uppercase text-white leading-tight"></h2>
+            <div class="flex flex-col gap-3">
+                <button onclick="window.print()" class="w-full bg-emerald-600 text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-lg active:bg-emerald-700">PDF REPORT</button>
+                <button onclick="location.reload()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-black uppercase tracking-widest active:bg-blue-700">New Match</button>
+                <a href="history.php" class="w-full bg-slate-800 text-white py-4 rounded-xl font-black uppercase tracking-widest text-center active:bg-slate-700">View Points</a>
+            </div>
+        </div>
+    </div>
+
+    <div id="printSheet" class="hidden print-only p-8 bg-white text-black">
+        <div style="text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 20px;">
+            <h1 style="margin: 0; font-size: 16pt; font-weight: 900;">OFFICIAL MATCH LOG</h1>
+            <p id="pMeta" style="margin: 5px 0; font-size: 8pt;"></p>
+        </div>
+        <div style="display: flex; justify-content: space-around; font-size: 11pt; font-weight: 700; border: 1px solid #000; padding: 5px; margin-bottom: 15px;">
+            <span id="pNameA"></span> <span id="pSetsScore"></span> <span id="pNameB"></span>
+        </div>
+        <table>
+            <thead><tr style="background-color: #eee;"><th>SET</th><th>TIME</th><th>EVENT</th><th>SCORE</th></tr></thead>
+            <tbody id="pLogBody"></tbody>
+        </table>
+        <div style="margin-top: 30px; font-weight: 900; text-align: right; border-top: 1px solid #000; padding-top: 10px;">
+            WINNER: <span id="pFinalWinner"></span>
+        </div>
+    </div>
+
+    <script>
+        let s = { scoreA: 0, scoreB: 0, setsA: 0, setsB: 0, toA: 2, toB: 2, subA: 6, subB: 6, format: 5, currentSet: 1, server: null, finished: false, startTime: '' };
+        let log = [], hist = [];
+
+        async function sync(action, extra = {}) {
+            const fd = new URLSearchParams();
+            fd.append('action', action);
+            fd.append('nameA', document.getElementById('nameA').value);
+            fd.append('nameB', document.getElementById('nameB').value);
+            fd.append('setsA', s.setsA); fd.append('setsB', s.setsB);
+            for (let k in extra) fd.append(k, extra[k]);
+            try { await fetch('api.php', { method: 'POST', body: fd }); } catch (e) { console.error(e); }
+        }
+
+        function toggleTheme() { document.body.classList.toggle('light-theme'); }
+        function resetMatch() { if(confirm("RESET MATCH?")) location.reload(); }
+        function getTime() { return new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }
+        
+        function startMatch(f) { 
+            s.format = f; 
+            s.startTime = getTime();
+            document.getElementById('initModal').classList.add('hidden'); 
+            update(); 
+        }
+
+        function addPoint(t) {
+            if (s.finished) return; 
+            hist.push(JSON.stringify(s));
+            s.server = t;
+            const name = document.getElementById('name'+t).value.toUpperCase();
+            if (t === 'A') s.scoreA++; else s.scoreB++;
+            
+            log.push({ set: s.currentSet, time: getTime(), event: name + ' POINT', scoreA: s.scoreA, scoreB: s.scoreB, team: t });
+            
+            const target = (s.currentSet === s.format) ? 15 : 25;
+            if ((s.scoreA >= target || s.scoreB >= target) && Math.abs(s.scoreA - s.scoreB) >= 2) {
+                const winMsg = `${name} WINS SET ${s.currentSet}`;
+                log.push({ set: s.currentSet, time: '---', event: winMsg, scoreA: s.scoreA, scoreB: s.scoreB, team: 'WIN' });
+                if (t === 'A') s.setsA++; else s.setsB++;
+                
+                if (s.setsA === Math.ceil(s.format/2) || s.setsB === Math.ceil(s.format/2)) { 
+                    s.finished = true; finish(name); 
+                } else {
+                    document.getElementById('setWinnerMsg').innerText = winMsg + ` (${s.scoreA}-${s.scoreB})`;
+                    document.getElementById('nextSetModal').classList.remove('hidden');
+                }
+            }
+            update();
+        }
+
+        function recordAction(type, t) {
+            const k = (type === 'TO' ? 'to' : 'sub') + t;
+            if (s[k] > 0) { 
+                hist.push(JSON.stringify(s)); s[k]--;
+                log.push({ set: s.currentSet, time: getTime(), event: `${type} - TEAM ${t}`, scoreA: s.scoreA, scoreB: s.scoreB, team: 'None' });
+                update();
+            }
+        }
+
+        function confirmNextSet() {
+            s.scoreA = 0; s.scoreB = 0; s.toA = 2; s.toB = 2; s.subA = 6; s.subB = 6; s.currentSet++;
+            document.getElementById('nextSetModal').classList.add('hidden');
+            update();
+        }
+
+        function update() {
+            const target = (s.currentSet === s.format) ? 15 : 25;
+            document.getElementById('scoreA').innerText = s.scoreA.toString().padStart(2,'0');
+            document.getElementById('scoreB').innerText = s.scoreB.toString().padStart(2,'0');
+            document.getElementById('setsA').innerText = s.setsA;
+            document.getElementById('setsB').innerText = s.setsB;
+            document.getElementById('setInfo').innerText = 'SET ' + s.currentSet;
+            document.getElementById('remA').innerText = 'TO WIN: ' + Math.max(0, target - s.scoreA);
+            document.getElementById('remB').innerText = 'TO WIN: ' + Math.max(0, target - s.scoreB);
+            document.getElementById('numToA').innerText = s.toA; document.getElementById('numSubA').innerText = s.subA;
+            document.getElementById('numToB').innerText = s.toB; document.getElementById('numSubB').innerText = s.subB;
+            
+            document.getElementById('srvA').classList.toggle('hidden', s.server !== 'A');
+            document.getElementById('srvB').classList.toggle('hidden', s.server !== 'B');
+            document.getElementById('cardA').classList.toggle('serving', s.server === 'A');
+            document.getElementById('cardB').classList.toggle('serving', s.server === 'B');
+        }
+
+        function undo() { if (hist.length > 0) { s = JSON.parse(hist.pop()); log.pop(); update(); } }
+
+        function finish(w) {
+            document.getElementById('finalWinnerUI').innerText = w + " WINS MATCH";
+            document.getElementById('pMeta').innerText = document.getElementById('matchID').value.toUpperCase() + " | START TIME: " + s.startTime;
+            document.getElementById('pNameA').innerText = document.getElementById('nameA').value.toUpperCase();
+            document.getElementById('pNameB').innerText = document.getElementById('nameB').value.toUpperCase();
+            document.getElementById('pSetsScore').innerText = s.setsA + " - " + s.setsB;
+            document.getElementById('pFinalWinner').innerText = w;
+
+            let h = ''; 
+            log.forEach(l => { 
+                let cls = l.team === 'A' ? "row-a" : (l.team === 'B' ? "row-b" : (l.team === 'WIN' ? "row-set-win" : ""));
+                let sA = l.scoreA > l.scoreB ? `<span class="win-point">${l.scoreA}</span>` : l.scoreA;
+                let sB = l.scoreB > l.scoreA ? `<span class="win-point">${l.scoreB}</span>` : l.scoreB;
+                h += `<tr class="${cls}"><td>${l.set}</td><td>${l.time}</td><td>${l.event}</td><td>${sA} - ${sB}</td></tr>`; 
+            });
+            document.getElementById('pLogBody').innerHTML = h;
+            
+            document.getElementById('finishModal').classList.remove('hidden');
+            sync('save_match', { matchLog: JSON.stringify(log), matchTitle: document.getElementById('matchID').value });
+        }
+    </script>
+</body>
+</html>
