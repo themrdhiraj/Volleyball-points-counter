@@ -1,14 +1,10 @@
-<?php 
-require 'db.php'; 
-session_start(); 
-$status_color = isset($db_connected) && $db_connected ? '#10b981' : '#ef4444';
-?>
+<?php require 'db.php'; session_start(); ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>V-ELITE v5.7 | JSON Logger</title>
+    <title>V-ELITE v5.7</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@700&display=swap');
@@ -36,21 +32,20 @@ $status_color = isset($db_connected) && $db_connected ? '#10b981' : '#ef4444';
                 <button onclick="startMatch(3)" class="w-full bg-blue-600 py-4 rounded-xl font-black text-white">BEST OF 3</button>
                 <button onclick="startMatch(5)" class="w-full bg-slate-800 py-4 rounded-xl font-black text-white">BEST OF 5</button>
             </div>
-            <div class="mt-4 text-[8px] tracking-[0.3em] font-bold" style="color: <?= $status_color ?>">DATABASE SYNC ACTIVE</div>
         </div>
     </div>
 
     <div id="nextSetModal" class="fixed inset-0 z-[110] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-6 hidden no-print">
         <div class="glass p-8 w-full max-w-xs text-center border-blue-500 border-2">
             <h2 id="setWinnerMsg" class="text-xl font-black mb-6 text-white leading-tight"></h2>
-            <button onclick="confirmNextSet()" class="w-full bg-blue-600 py-5 rounded-xl font-black text-white tracking-widest shadow-xl">START NEXT SET</button>
+            <button onclick="confirmNextSet()" class="w-full bg-blue-600 py-5 rounded-xl font-black text-white shadow-xl">START NEXT SET</button>
         </div>
     </div>
 
     <header class="flex justify-between items-center px-4 py-2 glass no-print shrink-0">
         <div class="leading-tight">
             <input type="text" id="matchID" value="OFFICIAL MATCH" class="bg-transparent font-black text-blue-500 text-[10px] w-28 outline-none uppercase">
-            <div id="setInfo" class="text-[9px] font-bold opacity-50">SET 1</div>
+            <div id="setInfo" class="text-[9px] font-bold opacity-50 uppercase">SET 1</div>
         </div>
         <div class="flex gap-2">
             <a href="history.php" class="w-8 h-8 flex items-center justify-center glass text-[10px]">📜</a>
@@ -70,12 +65,12 @@ $status_color = isset($db_connected) && $db_connected ? '#10b981' : '#ef4444';
                 <span id="scoreA" class="score-font text-6xl tracking-tighter">00</span>
                 <div class="text-right">
                     <div id="setsA" class="text-3xl font-black text-blue-500">0</div>
-                    <div id="remA" class="text-[7px] font-bold opacity-40">TO WIN: 25</div>
+                    <div id="remA" class="text-[7px] font-bold opacity-40 uppercase">TO WIN: 25</div>
                 </div>
             </div>
             <div class="flex gap-2 mt-2">
-                <button id="btnToA" onclick="recordAction('TO', 'A')" class="res-btn to-style"><span class="text-[6px]">TIMEOUT</span><span class="text-xs">REM: <span id="numToA">2</span></span></button>
-                <button id="btnSubA" onclick="recordAction('SUB', 'A')" class="res-btn sub-style"><span class="text-[6px]">SUB</span><span class="text-xs">REM: <span id="numSubA">6</span></span></button>
+                <button id="btnToA" onclick="recordAction('TO', 'A')" class="res-btn to-style"><span class="text-[6px]">TIMEOUT</span><span class="text-xs uppercase">REM: <span id="numToA">2</span></span></button>
+                <button id="btnSubA" onclick="recordAction('SUB', 'A')" class="res-btn sub-style"><span class="text-[6px]">SUB</span><span class="text-xs uppercase">REM: <span id="numSubA">6</span></span></button>
             </div>
         </div>
 
@@ -88,12 +83,12 @@ $status_color = isset($db_connected) && $db_connected ? '#10b981' : '#ef4444';
                 <span id="scoreB" class="score-font text-6xl tracking-tighter">00</span>
                 <div class="text-right">
                     <div id="setsB" class="text-3xl font-black text-orange-500">0</div>
-                    <div id="remB" class="text-[7px] font-bold opacity-40">TO WIN: 25</div>
+                    <div id="remB" class="text-[7px] font-bold opacity-40 uppercase">TO WIN: 25</div>
                 </div>
             </div>
             <div class="flex gap-2 mt-2">
-                <button id="btnToB" onclick="recordAction('TO', 'B')" class="res-btn to-style"><span class="text-[6px]">TIMEOUT</span><span class="text-xs">REM: <span id="numToB">2</span></span></button>
-                <button id="btnSubB" onclick="recordAction('SUB', 'B')" class="res-btn sub-style"><span class="text-[6px]">SUB</span><span class="text-xs">REM: <span id="numSubB">6</span></span></button>
+                <button id="btnToB" onclick="recordAction('TO', 'B')" class="res-btn to-style"><span class="text-[6px]">TIMEOUT</span><span class="text-xs uppercase">REM: <span id="numToB">2</span></span></button>
+                <button id="btnSubB" onclick="recordAction('SUB', 'B')" class="res-btn sub-style"><span class="text-[6px]">SUB</span><span class="text-xs uppercase">REM: <span id="numSubB">6</span></span></button>
             </div>
         </div>
     </main>
@@ -104,9 +99,9 @@ $status_color = isset($db_connected) && $db_connected ? '#10b981' : '#ef4444';
     </footer>
 
     <div id="finishModal" class="fixed inset-0 z-[200] bg-slate-950 flex items-center justify-center p-6 hidden no-print">
-        <div class="glass bg-white text-slate-950 p-8 w-full max-w-xs text-center shadow-2xl">
-            <h2 id="finalWinnerUI" class="text-xl font-black mb-6 italic uppercase underline"></h2>
-            <button onclick="window.print()" class="w-full bg-slate-900 text-white py-4 rounded-xl font-black mb-4 uppercase tracking-widest">Generate Report</button>
+        <div class="glass bg-white text-slate-950 p-8 w-full max-w-xs text-center">
+            <h2 id="finalWinnerUI" class="text-xl font-black mb-6 italic uppercase"></h2>
+            <button onclick="window.print()" class="w-full bg-slate-900 text-white py-4 rounded-xl font-black mb-4 uppercase">Generate Report</button>
             <button onclick="location.reload()" class="text-[9px] font-bold opacity-40 block mx-auto underline uppercase">Start New Match</button>
         </div>
     </div>
@@ -137,7 +132,7 @@ $status_color = isset($db_connected) && $db_connected ? '#10b981' : '#ef4444';
             fd.append('setsA', s.setsA);
             fd.append('setsB', s.setsB);
             for (let k in extra) fd.append(k, extra[k]);
-            try { await fetch('api.php', { method: 'POST', body: fd }); } catch (e) {}
+            try { await fetch('api.php', { method: 'POST', body: fd }); } catch (e) { console.error(e); }
         }
 
         function toggleTheme() { document.body.classList.toggle('light-theme'); }
@@ -155,7 +150,7 @@ $status_color = isset($db_connected) && $db_connected ? '#10b981' : '#ef4444';
             log.push({ set: s.currentSet, time: getTime(), event: name + ' POINT', scoreA: s.scoreA, scoreB: s.scoreB, team: t });
             
             if ((s.scoreA >= target || s.scoreB >= target) && Math.abs(s.scoreA - s.scoreB) >= 2) {
-                const winMsg = `${name} WINS SET ${s.currentSet} (${s.scoreA}-${s.scoreB})`;
+                const winMsg = `${name} WINS SET ${s.currentSet}`;
                 log.push({ set: s.currentSet, time: '---', event: winMsg, scoreA: s.scoreA, scoreB: s.scoreB, team: 'WINNER' });
                 if (t === 'A') s.setsA++; else s.setsB++;
                 if (s.setsA === Math.ceil(s.format/2) || s.setsB === Math.ceil(s.format/2)) { 
@@ -217,7 +212,7 @@ $status_color = isset($db_connected) && $db_connected ? '#10b981' : '#ef4444';
             document.getElementById('pLogBody').innerHTML = h;
             document.getElementById('finishModal').classList.remove('hidden');
 
-            // JSON SYNC TO DB
+            // --- SAVE LOG TO DB ---
             sync('save_match', { matchLog: JSON.stringify(log) });
         }
     </script>
